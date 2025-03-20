@@ -1,0 +1,127 @@
+@using System.Text.RegularExpressions
+@using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.Extensions.DependencyInjection
+@namespace Oqtane.Modules.Controls
+@inherits ModuleControlBase
+@inject IServiceProvider ServiceProvider
+@inject ISettingService SettingService
+@inject IStringLocalizer<RichTextEditor> Localizer 
+
+<div class="row" style="margin-bottom: 50px;">
+    <div class="col">
+        @_textEditorComponent
+    </div>
+</div>
+
+@code {
+    private string _textEditorType;
+    private RenderFragment _textEditorComponent;
+    private ITextEditor _textEditor;
+
+    [Parameter]
+    public string Content { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; } = false;
+
+    [Parameter]
+    public string Placeholder { get; set; }
+
+    [Parameter]
+    public string Provider { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> AdditionalAttributes { get; set; } = new Dictionary<string, object>();
+
+    protected override void OnInitialized()
+    {
+        _textEditorType = GetTextEditorType();
+    }
+
+    protected override void OnParametersSet()
+    {
+        _textEditorComponent = (builder) =>
+        {
+            CreateTextEditor(builder);
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(_textEditor != null)
+        {
+            _textEditor.Initialize(Content);
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    public async Task<string> GetHtml()
+    {
+        return await _textEditor.GetContent();
+    }
+
+    private void CreateTextEditor(RenderTreeBuilder builder)
+    {
+        if(!string.IsNullOrEmpty(_textEditorType))
+        {
+            var editorType = Type.GetType(_textEditorType);
+            if (editorType != null)
+            {
+                builder.OpenComponent(0, editorType);
+
+                var attributes = new Dictionary<string, object>
+                {
+                    { "Placeholder", Placeholder },
+                    { "ReadOnly", ReadOnly }
+                };
+
+                if (AdditionalAttributes != null)
+                {
+                    foreach(var key in AdditionalAttributes.Keys)
+                    {
+                        if(!attributes.ContainsKey(key))
+                        {
+                            attributes.Add(key, AdditionalAttributes[key]);
+                        }
+                        else
+                        {
+                            attributes[key] = AdditionalAttributes[key];
+                        }
+                    }
+                }
+
+                var index = 1;
+                foreach(var name in attributes.Keys)
+                {
+                    if (editorType.GetProperty(name) != null)
+                    {
+                        builder.AddAttribute(index++, name, attributes[name]);
+                    }
+                }
+
+                builder.AddComponentReferenceCapture(index, (c) =>
+                {
+                    _textEditor = (ITextEditor)c;
+                });
+                builder.CloseComponent();
+            }
+        }
+    }
+
+    private string GetTextEditorType()
+    {
+        const string EditorSettingName = "TextEditor";
+
+        if(!string.IsNullOrEmpty(Provider))
+        {
+            var provider = ServiceProvider.GetServices<ITextEditor>().FirstOrDefault(i => i.Name.Equals(Provider, StringComparison.OrdinalIgnoreCase));
+            if(provider != null)
+            {
+                return Utilities.GetFullTypeName(provider.GetType().AssemblyQualifiedName);
+            }
+        }
+
+        return SettingService.GetSetting(PageState.Site.Settings, EditorSettingName, Constants.DefaultTextEditor);
+    }
+}

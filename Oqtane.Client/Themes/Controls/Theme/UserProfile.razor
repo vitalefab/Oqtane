@@ -1,0 +1,46 @@
+@namespace Oqtane.Themes.Controls
+@using System.Net
+@inherits ThemeControlBase
+@inject IStringLocalizer<UserProfile> Localizer
+
+@inject NavigationManager NavigationManager
+
+<span class="app-profile">
+    @if (PageState.User != null)
+    {
+        <a href="@NavigateUrl("profile", "returnurl=" + _returnurl)" class="@CssClass">@PageState.User.Username</a>
+    }
+    else
+    {
+        @if (ShowRegister && PageState.Site.AllowRegistration)
+        {
+            <a href="@NavigateUrl("register", "returnurl=" + _returnurl)" class="@CssClass">@Localizer["Register"]</a>
+        }
+    }
+</span>
+
+@code {
+
+    [Parameter]
+    public bool ShowRegister { get; set; }
+    [Parameter]
+    public string CssClass { get; set; } = "btn btn-primary";
+
+    private string _returnurl = "";
+
+    protected override void OnParametersSet()
+    {
+		if (!PageState.QueryString.ContainsKey("returnurl"))
+		{
+			// remember current url
+			_returnurl = WebUtility.UrlEncode(PageState.Route.PathAndQuery);
+		}
+		else
+		{
+			// use existing value
+			_returnurl = PageState.QueryString["returnurl"];
+		}
+    }
+}
+
+

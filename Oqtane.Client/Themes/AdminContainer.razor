@@ -1,0 +1,28 @@
+@namespace Oqtane.Themes
+@inherits ContainerBase
+
+<div class="app-admin-modal">
+    <div class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><ModuleTitle /></h5>
+                    <a href="@_url" class="btn-close" aria-label="Close"></a>
+                </div>
+                <div class="modal-body">
+                    <ModuleInstance />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _url;
+
+    protected override void OnParametersSet()
+    {
+        _url = (!string.IsNullOrEmpty(PageState.ReturnUrl)) ? PageState.ReturnUrl : NavigateUrl();
+    }
+}
+
